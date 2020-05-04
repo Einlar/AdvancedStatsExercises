@@ -1,0 +1,44 @@
+---
+jupyter:
+  jupytext:
+    text_representation:
+      extension: .Rmd
+      format_name: rmarkdown
+      format_version: '1.2'
+      jupytext_version: 1.3.2
+  kernelspec:
+    display_name: R
+    language: R
+    name: ir
+---
+
+```{r}
+mat <- cbind(Uni05 = (1:100)/21, 
+             Norm  = rnorm(100)) #matrix with two columns
+df1 <- as.data.frame(mat)
+
+str(mat)
+```
+
+```{r}
+par(las = 1) #par = sets graphical parameters. las = label style (1 = horizontal)
+```
+
+```{r}
+boxplot(df1, horizontal = TRUE)
+```
+
+```{r}
+boxplot(Speed ~ Expt,
+        data = morley)
+#plotta primo, secondo (mediana), terzo quartile, e anche min e max (escludendo gli outliers). Gli outliers sono rappresentati
+#come punti a parte
+```
+
+```{r}
+
+```
+
+```{r}
+
+```

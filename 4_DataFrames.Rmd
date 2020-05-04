@@ -1,0 +1,191 @@
+---
+jupyter:
+  jupytext:
+    text_representation:
+      extension: .Rmd
+      format_name: rmarkdown
+      format_version: '1.2'
+      jupytext_version: 1.3.2
+  kernelspec:
+    display_name: R
+    language: R
+    name: ir
+---
+
+S3 vectors built on top of lists:
+- data frames 
+- tibbles (more advanced and robust)
+
+Data frame: named list of vectors, belonging to the data.frame class.
+
+```{r}
+#Named dataframe
+df1 <- data.frame(x = 1:3, y = letters[1:3]) #two elements, 'x' and 'y', with the SAME number of rows
+df1
+```
+
+```{r}
+df2 <- data.frame(x = 1:3, y = letters[1:2]) #error, y has 2 rows, while x has 3
+```
+
+```{r}
+attributes(df1) #show row/column names
+```
+
+```{r}
+#Unnamed dataframe
+df2 <- data.frame(1:3, letters[1:3]) #a name is assigned automatically
+df2
+```
+
+```{r}
+exam1 <- c(27, 28, 24, 24)
+exam2 <- c(25, 30, 26, 24)
+
+gender <- c("M", "F", "M", "M")
+
+dc <- data.frame(exam1, exam2, gender) #create dataframe from vectors
+head(dc, n=2) #prints header + first 2 rows
+```
+
+```{r}
+str(dc) #note that the third column has been converted to factors
+#so we lose the character identity of the values: they are converted to numbers
+```
+
+```{r}
+#We can avoid this by specifying
+dc <- data.frame(exam1, exam2, gender, stringsAsFactors=FALSE)
+str(dc) #preserves characters
+```
+
+```{r}
+d1 <- data.frame(x = c(1, 2, 3), 
+                 y = c(5, 7, 9))
+d1
+```
+
+```{r}
+#Copy on modify happens also for dataframes (as they are list).
+library(lobstr)
+```
+
+```{r}
+lobstr::ref(d1)
+```
+
+```{r}
+d2 <- d1 #creates a reference to d1
+lobstr::ref(d2) #same addresses as d1
+```
+
+```{r}
+d2[, 2] <- d2[, 2] * 2 #modify the second column
+lobstr::ref(d2) #now the address for the second column has changed (but the first one not!)
+```
+
+```{r}
+#what if we modify a row?
+d3 <- d1
+lobstr::ref(d3) #same as before
+
+d3[1, ] <- d3[1, ] * 3
+lobstr::ref(d3) #both columns change!
+```
+
+So modifying single columns is quick, but modifying a row effectively re-creates the entire data.frame
+
+```{r}
+#Sometimes modify on copy does not apply. There are 2 main exceptions
+
+#Single binding, i.e. object that is bound to a single reference
+v <- c(1, 3, 2)
+lobstr::ref(v)
+
+v[[3]] <- 4 #modify a single element on a vector that is referred by a single variable
+lobstr::ref(v) #the address does not change, modification happens in-place (why does it change!?)
+#it does work in R terminal, but nothere on jupyter
+```
+
+## Accessing elements
+
+```{r}
+dc[,2] #second column
+```
+
+```{r}
+dc[[2]] #second element is the second column (remember that the dataframe is a list of vectors)
+```
+
+```{r}
+dc$gender #access by name
+```
+
+```{r}
+dc$ge #or by abbreviations (works sometimes)
+```
+
+```{r}
+dc[1,1] #acccess single element
+```
+
+```{r}
+#We can label also rows
+df1 <- data.frame( age = c(35, 25, 18),
+                   hair = c("blond", "brown", NA),
+                   row.names = c("Bob", "Tom", "Sam"))
+df1
+```
+
+```{r}
+names(df1)
+```
+
+```{r}
+row.names(df1)
+```
+
+```{r}
+#However row names are a BAD PRACTICE: use another column!
+```
+
+```{r}
+dc[sample(1:4,2),] #sample 2 rows
+```
+
+```{r}
+data <- data.frame(slope = c(11, NA, 3, 5),
+                   pH = c(4.1, 5.2, 4.9, NA),
+                   area = c(3.6, 5.1, 2.8, 3.7)) 
+data
+```
+
+```{r}
+na.omit(data)  #remove rows with NAs
+```
+
+```{r}
+clean_data <- na.exclude(data)
+```
+
+```{r}
+install.packages("tidyverse")
+```
+
+# Tibble
+
+```{r}
+library(tidyverse)
+```
+
+```{r}
+dct <- tibble(dc) #convert data.frame to tibble
+```
+
+```{r}
+dct
+```
+
+```{r}
+
+```

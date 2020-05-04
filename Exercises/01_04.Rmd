@@ -1,0 +1,286 @@
+---
+jupyter:
+  jupytext:
+    text_representation:
+      extension: .Rmd
+      format_name: rmarkdown
+      format_version: '1.2'
+      jupytext_version: 1.3.2
+  kernelspec:
+    display_name: R
+    language: R
+    name: ir
+---
+
+# Exercise_r01
+**Name**: Francesco Manzali <br/>
+**ID**: 1234428
+
+```{r}
+sessionInfo()
+```
+
+# Exercise 1
+
+```{r}
+install.packages('units') #to add units
+```
+
+```{r}
+library(units)
+```
+
+```{r}
+loch <- paste0('Loch ', c('Ness', 'Lomond', 'Morar', 'Tay', 'Awe', 'Maree',
+                          'Ericht', 'Lochy', 'Rannoch', 'Shiel', 'Katrine', 'Arkaig', 'Shin'))
+volume <- c(7.45, 2.6, 2.3, 1.6, 1.2, 1.09, 1.08, 1.07, 0.97, 0.79, 0.77, 0.75, 0.35)
+units(volume) <- "km^3"
+area <- c(56, 71, 27, 26.4, 39, 28.6, 18.6, 16, 19, 19.5, 12.4, 16, 22.5)
+units(area) <- "km^2"
+length <- c(39, 36, 18.8, 23, 41, 20, 23, 16, 15.7, 28, 12.9, 19.3, 27.8)
+units(length) <- "km"
+max_depth <- c(230, 190, 310, 150, 94, 114, 156, 162, 134, 128, 151, 109, 49)
+units(max_depth) <- "m"
+mean_depth <- c(132, 37, 87, 60.6, 32, 38, 57.6, 70, 51, 40, 43.4, 46.5, 15.5)
+units(mean_depth) <- "m"
+```
+
+```{r}
+#0. Build dataframe from vectors
+(scottish.lakes = data.frame(loch, volume, area, length, max_depth, mean_depth))
+```
+
+```{r}
+#1. Evalaute the highest and lowest volume and area lake
+volume_area = scottish.lakes[,c(2,3)]
+sprintf('Maximum')
+apply(volume_area, 2, max)
+sprintf('Minimum')
+apply(volume_area, 2, min)
+```
+
+```{r}
+#2. Order the frame with respect to the area and determine the two largest area lakes
+(area_sorted = scottish.lakes[order(area, decreasing=TRUE),])
+```
+
+```{r}
+#Two lakes with highest area
+area_sorted[1:2,]
+```
+
+```{r}
+#3. By summing up the areas occupied by the lakes, determine the area of Scotland covered by water
+sprintf('Area of Scotland covered by water is %d km^2', sum(scottish.lakes$area))
+```
+
+# Exercise 2
+
+```{r}
+install.packages(c('DAAG', 'tibble'), type='source')
+```
+
+```{r}
+#Load libraries
+library(tibble)
+library(DAAG)
+```
+
+```{r}
+#Get information on the package content and on the ais data frame
+?tibble
+```
+
+```{r}
+library(help='DAAG') #DAAG contains several datasets
+```
+
+```{r}
+?ais #measurements of blood characteristics for various athletes
+```
+
+```{r}
+#Create a tibble from the ais data.frame
+(dct <- tibble(ais)) 
+```
+
+```{r}
+#1. Group data by gender and sport. Produce a barplot with the table adding a legend
+gender_sport = table(dct$sex,dct$sport)
+
+barplot(gender_sport, beside=TRUE, legend = rownames(gender_sport), las=2, ylab='Count')
+```
+
+```{r}
+#2. Do columns hold missing values?
+any(is.na(dct)) #No missing values
+```
+
+```{r}
+#3. Make boxplots of the main blood variables (rcc, wcc, hc, hg) for different kind of sports
+old_par <- par()
+
+par(mfrow=c(2,2))
+
+boxplot(rcc ~ sport, data = dct, las=2,
+        xlab = 'Sport', ylab = 'Red blood cell count', col='firebrick3', medcol='white')
+
+boxplot(wcc ~ sport, data = dct, las=2,
+        xlab = 'Sport', ylab = 'White blood cell count', col='ghostwhite', medcol='dodgerblue2')
+
+boxplot(hc ~ sport, data = dct, las=2,
+        xlab = 'Sport', ylab = 'Hematocrit', col='darkorchid3', medcol='white')
+
+boxplot(hg ~ sport, data = dct, las=2,
+        xlab = 'Sport', ylab = 'Hemaglobin', col='deeppink3', medcol='white')
+```
+
+```{r}
+#4. Scatter plots for correlations
+plot(dct$rcc, dct$wcc, col = ifelse(dct$sex == 'f', "deeppink3", "dodgerblue2"), pch = ifelse(dct$sex == 'f', 16, 15),
+     xlab = 'Red blood cell count', ylab = 'White blood cell count')
+legend(6, 14, legend=c("Female", "Male"),
+       col=c("deeppink3", "dodgerblue2"), pch=c(16,15), cex=0.8)
+
+plot(dct$rcc, dct$hc, col = ifelse(dct$sex == 'f', "deeppink3", "dodgerblue2"), pch = ifelse(dct$sex == 'f', 16, 15),
+     xlab = 'Red blood cell count', ylab = 'Hematocrit')
+legend(6, 60, legend=c("Female", "Male"),
+       col=c("deeppink3", "dodgerblue2"), pch=c(16,15), cex=0.8)
+
+plot(dct$rcc, dct$hg, col = ifelse(dct$sex == 'f', "deeppink3", "dodgerblue2"), pch = ifelse(dct$sex == 'f', 16, 15),
+     xlab = 'Red blood cell count', ylab = 'Hemaglobing concentration')
+legend(6, 14, legend=c("Female", "Male"),
+       col=c("deeppink3", "dodgerblue2"), pch=c(16,15), cex=0.8)
+```
+
+# Exercise 3
+
+```{r}
+needed_packages <- c('lubridate', 'readxl', 'curl')
+```
+
+```{r}
+already_installed <- needed_packages %in% installed.packages()
+for (pack in needed_packages[!already_installed]) {
+    message(paste("To be installed:", pack, sep=" "))
+    install.packages(pack)
+}
+```
+
+```{r}
+library(lubridate)
+library(readxl)
+library(curl)
+```
+
+```{r}
+url <- "https://www.ecdc.europa.eu/sites/default/files/documents/"
+fname <- "COVID-19-geographic-disbtribution-worldwide-"
+date <- lubridate::today() - 1
+ext = ".xlsx"
+target <- paste(url, fname, date, ext, sep="")
+message("target: ", target)
+tmp_file <- tempfile("data", tempdir(), fileext=ext)
+tmp <- curl::curl_download(target, destfile=tmp_file)
+```
+
+```{r}
+covid <- readxl::read_xlsx(tmp_file)
+```
+
+**Data structure**
+- `dateRep`: date of the report
+- `day`, `month`, `year`: reformatted `dateRep`
+- `cases`, `deaths`: confirmed cases and deaths on that day
+- `countriesAndTerritories`: location (extended name)
+- `geoId`: geographical identifier
+- `countryterritoryCode`: country identifier
+- `popData2018`: total population in that region (according to World Bank 2018 database)
+
+```{r}
+#1. Examine data
+covid
+```
+
+```{r}
+#2. Create a sub-tibble containing only the last day (hint: apply a selection on dateRep column)
+(last_day = covid[covid$dateRep == date,])
+
+#Produce a table with all countries with number of deaths or number of new cases greather than 200
+most_affected_countries = last_day[last_day$cases > 200 | last_day$deaths > 200, 'countriesAndTerritories']
+```
+
+```{r}
+most_affected_countries
+```
+
+```{r}
+#3. Select the top 10 countries, in terms of cases, and plot the total number of cases as a function of time.
+#Plot the total number of deaths as a function of time.
+#In order to compare the different curves, normalize the first date-time plot to the same t0 value.
+
+top10countries = as.list(last_day[order(last_day$cases, decreasing=TRUE),][1:10,'countriesAndTerritories'])[[1]]
+#Top 10 countries in terms of cases during last day
+```
+
+```{r}
+top10countries
+```
+
+```{r}
+covid_selected = covid[covid$countriesAndTerritories %in% top10countries,] #Select only most affected countries
+covid_ordered = covid_selected[order(covid_selected$dateRep),] #order by date
+
+#for each country, add its cumulative sum of cases in the column "cumulative_cases"
+covid_ordered$cumulative_cases <- ave(covid_ordered$cases, covid_ordered$countriesAndTerritories, FUN=cumsum)
+
+#same for deaths
+covid_ordered$cumulative_deaths <- ave(covid_ordered$deaths, covid_ordered$countriesAndTerritories, FUN=cumsum)
+```
+
+```{r}
+library(ggplot2)
+
+date_plot <- function(p) {
+    p + geom_line(aes(colour = factor(countriesAndTerritories))) + xlab('Date') + ylab('Total number of cases') +
+    xlim(as.POSIXlt("2020-03-01"), as.POSIXlt("2020-04-14")) + scale_color_discrete(name="Country")
+}
+
+p <- ggplot(covid_ordered, aes(dateRep, cumulative_cases))
+p <- date_plot(p)
+print(p)
+
+p2 <- ggplot(covid_ordered, aes(dateRep, cumulative_deaths))
+p2 <- date_plot(p2) + ylab("Total number of deaths")
+print(p2)
+```
+
+```{r}
+threshold = 1000
+thresholded = subset(covid_ordered, cumulative_cases > threshold) #start counting days from when cumulative_cases surpasses threshold
+```
+
+```{r}
+start_dates = as.list(by(thresholded$dateRep, thresholded$countriesAndTerritories, FUN=min))
+```
+
+```{r}
+starts = unlist(start_dates[covid_ordered$countriesAndTerritories], use.names=FALSE) #starting date for each row. Convert list => numerical array
+attributes(starts) <- attributes(covid_ordered$dateRep) #convert numerical array => posixct
+```
+
+```{r}
+covid_ordered$days_past_infection = difftime(covid_ordered$dateRep, starts, units="days")
+```
+
+```{r}
+p3 <- ggplot(subset(covid_ordered, days_past_infection > 0), aes(days_past_infection, cumulative_cases)) + 
+      geom_line(aes(colour = factor(countriesAndTerritories))) + scale_color_discrete(name="Country") + xlab('Days past first 1000 cases') +
+      ylab('Total number of cases')
+print(p3)
+
+p4 <- ggplot(subset(covid_ordered, days_past_infection > 0), aes(days_past_infection, cumulative_deaths)) + 
+      geom_line(aes(colour = factor(countriesAndTerritories))) + scale_color_discrete(name="Country") + xlab('Days past first 1000 cases') +
+      ylab('Total number of deaths')
+print(p4)
+```

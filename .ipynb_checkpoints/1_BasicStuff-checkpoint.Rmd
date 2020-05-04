@@ -1,0 +1,160 @@
+---
+jupyter:
+  jupytext:
+    text_representation:
+      extension: .Rmd
+      format_name: rmarkdown
+      format_version: '1.2'
+      jupytext_version: 1.3.2
+  kernelspec:
+    display_name: R
+    language: R
+    name: ir
+---
+
+# Installation
+**Anaconda**
+- `conda install -c r r-essentials` (existing environment)
+- `conda create -n environment_name -c r r-essentials` (new environment)
+
+**Docker**
+```bash
+docker pull r-base #install an image
+docker images -a #list images
+open xquartz #open xserver
+ifconfig | fgrep 192 #get local IP address
+xhost + <address> #config local ip address ?```
+
+`docker run -it --rm -v "$PWD":/mnt -e DISPLAY=address:0 --name Rint r-base  #run docker interactive`
+- -it = interactive session
+- -rm remove container on exit
+- -v "$PWD":/mnt virtual folder /mnt linked to local folder PWD
+- -e DISPLAY=address:0 configurate graphical display
+- --name Rint name for the docker session
+- r-base which image to run
+    
+
+`docker run --rm -d -P --name RJup -v "$PWD":/home/jovyan/work jupyter/r-notebook`
+
+- -d = detached session (run in background)
+- -P returns a port to access the docker (needed for jupyter)
+- --name RJup
+- -v "$PWD":/home/jovyan/work #workfolder of the notebook
+- jupyter/r-notebook #name of the image
+    
+```docker ps -a #see the ports mapping
+docker logs --tail 4 #see the token for authentication```
+    
+#open jupyter in a browser and use the token
+
+
+## Get Help
+
+```{r}
+?sqrt #help for a certain package
+```
+
+```{r}
+apropos("lm") #Related packages
+```
+
+```{r}
+example(sqrt) #run example code
+```
+
+```{r}
+help.search("data input") #fuzzy search in the docs
+```
+
+```{r}
+find("read.table") #find a package
+```
+
+```{r}
+library(help=base) #list contents of "base" package
+```
+
+```{r}
+pkg <- installed.packages() #store the list of all the installed packages in a variable "pkg"
+```
+
+```{r}
+pkg #it appears as a table
+```
+
+```{r}
+df_pkg <- data.frame(pkg) #organize the tabular data in a DataFrame structure
+str(df_pkg) #show the structure
+```
+
+```{r}
+names(df_pkg) #column names
+```
+
+```{r}
+df_pkg[1,2] #Access row 1, column 2
+```
+
+```{r}
+df_pkg[1,] #Just first row, all columns
+```
+
+```{r}
+df_pkg[1,1:3] #first row, first 3 columns
+```
+
+```{r}
+df_pkg[1:10,1:3] #first 10 rows, first 3 columns
+```
+
+```{r}
+df_pkg[,1:3] #all rows, first 3 columns
+```
+
+**Install new packages**
+- from CRAN (official, verified, *stable* packages)
+- from GitHub repos (developer versions)
+- other repositories (e.g. BioConductor)
+
+```{r}
+#es. data.table: https://cran.r-project.org/web/packages/data.table/index.html, or on https://github.com/Rdatatable/data.table
+```
+
+## Manage objects
+
+```{r}
+objects() #or ls(), list all the objects created within the session
+```
+
+```{r}
+search()
+```
+
+```{r}
+install.packages("data.table") #install the data.table
+```
+
+```{r}
+#Normally new packages are not loaded:
+search()
+```
+
+```{r}
+library("data.table") #Load the new package
+search()
+```
+
+## R as calculator
+
+```{r}
+log(34/5.5)
+```
+
+```{r}
+log(34.7) + sqrt(12) -
+ 25 / 7 * 46^3 #can split 
+```
+
+```{r}
+
+```

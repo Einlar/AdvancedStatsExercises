@@ -1,0 +1,153 @@
+---
+jupyter:
+  jupytext:
+    text_representation:
+      extension: .Rmd
+      format_name: rmarkdown
+      format_version: '1.2'
+      jupytext_version: 1.3.2
+  kernelspec:
+    display_name: R
+    language: R
+    name: ir
+---
+
+```{r}
+x <- c(1,2,3)
+y <- x
+y[3] <- 4
+
+str(x)
+str(y)
+```
+
+Variables are references. When copying x in y, we are not copying the data, but we have two references to the same object. If then $y$ changes, R creates a copy laso of the data.
+
+To inspect the internal data structure and memory allocation we can use the package lobstr.
+
+```{r}
+install.packages("lobstr")
+```
+
+```{r}
+lobstr::obj_addr(x) #we can use the package name as a namespace, with "::" to access its methods
+```
+
+```{r}
+help(package=lobstr) #Access documentation
+```
+
+```{r}
+library(lobstr) #loads the package, so that we do not need to use its namespace
+```
+
+```{r}
+#So, let's redo the above experiment and inspect it with lobstr
+```
+
+```{r}
+a <- c(1,2,3)
+b <- a
+
+obj_addr(a); obj_addr(b) #same address
+```
+
+```{r}
+b[1] <- 2
+
+obj_addr(a); obj_addr(b) #address of b changes
+```
+
+## Lists
+
+```{r}
+l1 <- list( 1:3, "list element", c(TRUE, FALSE, FALSE), c(3.5, 4, 6.2, -1.75))
+typeof(l1)
+```
+
+Lists contain several different objects, as a list of references to them. R has a garbage collector, and so automatically deallocates memory when the last reference to an object goes out of scope.
+
+```{r}
+ref(l1) #inspect the list: gives the address to each of its objects
+```
+
+## Matrices
+
+```{r}
+X <- matrix (c(1,0,0,0,1,0,0,0,1) , nrow =3) ; X
+```
+
+```{r}
+class(X)
+attributes(X)
+str(X)
+```
+
+```{r}
+vct <- c(1,2,3,4,4,3,2,1)
+V <- matrix ( vct , byrow =T , nrow =2) #equivalent to vct.reshape((4,2))
+V
+```
+
+```{r}
+V <- matrix ( vct , byrow =F , nrow =2)
+V
+```
+
+```{r}
+X <- matrix(rpois(n=20, lambda=1.5), nrow=4) #Fill matrix with samples from Poisson distribution
+X
+```
+
+```{r}
+X[3,3]
+```
+
+```{r}
+X[4,] #row 4
+```
+
+```{r}
+X[,5] #column 5
+```
+
+```{r}
+rowSums(X)
+```
+
+```{r}
+rowMeans(X)
+```
+
+```{r}
+#Adding rows and columns
+
+vct <- matrix(c(1,0,2,5,1,1,3,1,3,1,0,2,1,0,2,1), byrow=T, nrow=4)
+vct
+```
+
+```{r}
+vct <- rbind(vct, apply(vct, 2, mean)) #rbind combines "by row", i.e. merges the vectors returned by the apply function as rows
+```
+
+```{r}
+vct <- cbind(vct, apply(vct, 1, var))
+```
+
+```{r}
+#apply(matrix, axis, functin): iterates over vectors on axis (1=rows, 2=columns) of that matrix
+```
+
+```{r}
+colnames(vct) <- c(1:4, "variance") #Name the fields
+rownames(vct) <- c(1:4, "mean")
+#Note that 1:4 are converted to characters (names are always characters)
+```
+
+```{r}
+vct
+```
+
+```{r}
+()
+```

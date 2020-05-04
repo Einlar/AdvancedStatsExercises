@@ -1,0 +1,241 @@
+---
+jupyter:
+  jupytext:
+    formats: ipynb,Rmd
+    text_representation:
+      extension: .Rmd
+      format_name: rmarkdown
+      format_version: '1.2'
+      jupytext_version: 1.3.2
+  kernelspec:
+    display_name: R
+    language: R
+    name: ir
+---
+
+```{r}
+options(repr.plot.width=8, repr.plot.height=5) #set a common width/height for plots
+```
+
+## Exercise 1
+The triangular distribution, in the interval $(a,b)$, is given by the following:
+$$
+f(X) = 
+\begin{cases}
+\frac{2(x-a)}{(b-a)(c-a)} & a \leq x < c\\
+\frac{2(b-x)}{(b-a)(b-c)} & c \leq x \leq b\\
+0 & \text{otherwise}
+\end{cases}
+$$
+where $c \in [a,b]$.
+
+
+a) plot the function, given the interval $(a,b)$
+
+```{r}
+f <- function(x,a,b,c) {
+    if (c > b | c < a)
+        return(-1)
+    
+    value <- ifelse(a <= x & x < c, 2 * (x-a) / ((b-a) * (c-a)),
+             ifelse(c <= x & x <= b, 2 * (b-x) / ((b-a) * (b-c)), 0))
+    return(value)
+}
+```
+
+```{r}
+a = -2
+b = 1
+c = 0
+
+xs = seq(a,b, length.out=50)
+plot(xs, f(xs, a, b, c), pch=20, col = 'red', xlab='x', ylab='f(x)')
+curve(f(x,a,b,c), from=a, to=b, lwd=2, col = 'black', lty=2, add=TRUE)
+```
+
+b) write an algorithm to generate random numbers from the triangular distribution
+
+```{r}
+invCDF <- function(p, a,b,c) {
+    if (c > b | c < a)
+        return(-1)
+    
+    value <- ifelse(0 <= p & p < (c-a)/(b-a), a + sqrt(p * (b-a) * (c-a)), 
+             ifelse((c-a)/(b-a) <= p & p <= 1, b - sqrt((1-p) * (b-a) * (b-c)), -1))
+    
+    return(value)
+}
+```
+
+```{r}
+rtriangular <- function(a,b,c, num=1) {
+    u <- runif(num)
+    triang <- invCDF(u, a,b,c)
+    
+    return(triang)
+}
+```
+
+**TO DO**: Add rejection sampling (see below)
+
+
+c) generate $10^4$ random number from the distribution, show them in an histogram and superimpose the analytical curve
+
+```{r}
+N = 10000
+hist(rtriangular(-2,1,0, N), 50, freq=FALSE)
+curve(f(x,a,b,c), from=a, to=b, lwd=2, col = 'black', lty=2, add=TRUE)
+```
+
+## Exercise 2
+
+
+Given a discrete probability distribution, defined by the following probabilities:
+`0.05, 0.19, 0.14, 0.17, 0.02, 0.11, 0.06, 0.05, 0.04, 0.17`
+
+a) plot the probability density function and the cumulative density function
+
+```{r}
+p <- c(0.05, 0.19, 0.14, 0.17, 0.02, 0.11, 0.06, 0.05, 0.04, 0.17)
+
+par(mfrow=c(1,2))
+barplot(p, names.arg = seq_along(p), xlab='x', ylab='PDF(x)')
+barplot(cumsum(p), names.arg = seq_along(p), xlab='x', ylab='CDF(x)')
+```
+
+b) Write an algorithm to generate random numbers from the discrete probability distribution
+
+```{r}
+cdf <- cumsum(p)
+
+generate_discrete <- function(num = 1) {
+    u <- runif(num)
+    
+    return(findInterval(u, cdf) + 1) 
+}
+```
+
+```{r}
+barplot(table(generate_discrete(10000)))
+```
+
+## Exercise 3
+Generate random variables from the following distribution:
+$$ f(X)=\frac{2}{\pi R^{2}} \sqrt{R^{2}-x^{2}} $$
+where $-R \leq x \leq R$
+
+a) Using the acceptance-rejection algorithm, assume $M=2/(\pi R)$ and generate $10^4$ random variables, plotting them in an histogram
+
+```{r}
+func <- function(x, R) {
+    value <- 2 / (pi * R^2) * sqrt(R^2 - x^2)
+    
+    return(value)
+}
+
+sample_func <- function(R, num=1) { #add comments on batches
+    batch_size <- max(c(num %/% 10, 1))
+    
+    n_generated <- 0
+    generated <- rep(NA, num)
+    
+    M <- 2 / (pi * R)
+    
+    while (n_generated < num) {
+        x <- (runif(batch_size) - 0.5) * 2 * R #Uniform x in [-R, R]
+    
+        f_val <- func(x, R)
+        accept <- runif(batch_size) * M
+        
+        batch_gen <- x[accept < f_val]
+        
+        generated[(n_generated+1):min(num, n_generated + length(batch_gen))] <- as.array(batch_gen)[1:min(length(batch_gen),
+                                                                                                          num - n_generated)]
+        
+        n_generated <- n_generated + length(batch_gen)
+    }
+    
+    return(generated)
+}
+```
+
+```{r}
+hist(sample_func(5, 100000))
+```
+
+## Exercise 4
+An important property of the gamma distribution is the so-called *reproductive property*. Given a sequence of independent random variable $X_j \sim \mathrm{Gamma}(\alpha_j, \beta)$, it follows that:
+$$Y = \sum_{j=1}^n X_j \to Y \sim \mathrm{Gamma}(\alpha,\beta) \text{ where } \alpha = \sum_{k=1}^n \alpha_j $$
+If $\alpha = m$ is an integer, a random variable from gamma distribution $\Gamma(m,\beta)$ (also known as Erlang distribution) can be obtained by summing $m$ independent exponential random variables $X_j \sim \mathrm{Exp}(\beta)$:
+
+$$Y = \beta \sum_{j=1}^m (-\ln U_j) = - \beta \ln \prod_{j=1}^m U_j$$
+
+a) write an algorithm to sample variables from an Erlang distribution $\mathrm{Gamma}(m, \beta)$.
+
+```{r}
+rGamma <- function(m, beta, num=1) { #Uj are uniform!
+    Xjs <- matrix(runif(num * m), ncol=m, byrow=TRUE) #matrix (num, m), store by row
+    
+    products <- apply(Xjs, 1, prod)
+    
+    return(-beta * log(products))
+} #plot over gamma
+```
+
+```{r}
+hist(rGamma(2,.5,10000), 50) #TO DO: Superimpose Gamma dist
+```
+
+## Exercise 5
+One of the first random number generator was proposed by von Neumann, the so-called *middle-square* algorithm.
+
+Write R code to implement this type of generator and, given a fixed digit number input, square it and remove the leading and trailing digits, in order to return a number with the same number of digits as the original number.
+
+*Suggestion*: after having squared the number, convert it to a list of characters:
+
+`number <- unlist(strsplit(as.character(x.squared), ""))`
+
+and, after having removed the head and tail of the list, convert it back to a number:
+
+`as.numeric(paste(number.after.trimming, collapse=""))`
+
+```{r}
+install.packages('lambda.r')
+```
+
+```{r}
+library(lambda.r)
+```
+
+```{r}
+middle_square_generator(start_seed) %as%
+{
+  n <- as.integer(log10(start_seed)) #number of digits in the seed
+  value <- start_seed
+  function() {
+    
+    number <- unlist(strsplit(format(value^2, scientific=FALSE), ""))
+    n_to_remove = length(number) - n
+    
+    if (n_to_remove < 0) {
+        return(0) 
+    }
+      
+    trimmed <- number[(ceiling(n_to_remove/2)):(n+ceiling(n_to_remove/2))]
+    trimmed_numeric <- as.numeric(paste(trimmed, collapse=""))
+    value <<- as.numeric(paste(trimmed, collapse=""))
+    return(value)
+  }
+} #discuss (TO DO)
+```
+
+```{r}
+gen <- middle_square_generator(1234)
+for(i in 1:1000) {
+    print(gen())
+}
+```
+
+```{r}
+
+```

@@ -1,0 +1,481 @@
+---
+jupyter:
+  jupytext:
+    text_representation:
+      extension: .Rmd
+      format_name: rmarkdown
+      format_version: '1.2'
+      jupytext_version: 1.3.2
+  kernelspec:
+    display_name: R
+    language: R
+    name: ir
+---
+
+```{r}
+x <- c(1,2,3)
+y <- x
+y[3] <- 4
+
+str(x)
+str(y)
+```
+
+Variables are references. When copying x in y, we are not copying the data, but we have two references to the same object. If then $y$ changes, R creates a copy laso of the data.
+
+To inspect the internal data structure and memory allocation we can use the package lobstr.
+
+```{r}
+install.packages("lobstr")
+```
+
+```{r}
+lobstr::obj_addr(x) #we can use the package name as a namespace, with "::" to access its methods
+```
+
+```{r}
+help(package=lobstr) #Access documentation
+```
+
+```{r}
+library(lobstr) #loads the package, so that we do not need to use its namespace
+```
+
+```{r}
+#So, let's redo the above experiment and inspect it with lobstr
+```
+
+```{r}
+a <- c(1,2,3)
+b <- a
+
+obj_addr(a); obj_addr(b) #same address
+```
+
+```{r}
+b[1] <- 2
+
+obj_addr(a); obj_addr(b) #address of b changes
+```
+
+## Lists
+
+```{r}
+l1 <- list( 1:3, "list element", c(TRUE, FALSE, FALSE), c(3.5, 4, 6.2, -1.75))
+typeof(l1)
+```
+
+Lists contain several different objects, as a list of references to them. R has a garbage collector, and so automatically deallocates memory when the last reference to an object goes out of scope.
+
+```{r}
+ref(l1) #inspect the list: gives the address to each of its objects
+```
+
+## Matrices
+
+```{r}
+X <- matrix (c(1,0,0,0,1,0,0,0,1) , nrow =3) ; X
+```
+
+```{r}
+class(X)
+attributes(X)
+str(X)
+```
+
+```{r}
+vct <- c(1,2,3,4,4,3,2,1)
+V <- matrix ( vct , byrow =T , nrow =2) #equivalent to vct.reshape((4,2))
+V
+```
+
+```{r}
+V <- matrix ( vct , byrow =F , nrow =2)
+V
+```
+
+```{r}
+X <- matrix(rpois(n=20, lambda=1.5), nrow=4) #Fill matrix with samples from Poisson distribution
+X
+```
+
+```{r}
+X[3,3]
+```
+
+```{r}
+X[4,] #row 4
+```
+
+```{r}
+X[,5] #column 5
+```
+
+```{r}
+rowSums(X)
+```
+
+```{r}
+rowMeans(X)
+```
+
+```{r}
+#Adding rows and columns
+
+vct <- matrix(c(1,0,2,5,1,1,3,1,3,1,0,2,1,0,2,1), byrow=T, nrow=4)
+vct
+```
+
+```{r}
+vct <- rbind(vct, apply(vct, 2, mean)) #rbind combines "by row", i.e. merges the vectors returned by the apply function as rows
+```
+
+```{r}
+vct <- cbind(vct, apply(vct, 1, var))
+```
+
+```{r}
+#apply(matrix, axis, functin): iterates over vectors on axis (1=rows, 2=columns) of that matrix
+```
+
+```{r}
+colnames(vct) <- c(1:4, "variance") #Name the fields
+rownames(vct) <- c(1:4, "mean")
+#Note that 1:4 are converted to characters (names are always characters)
+```
+
+```{r}
+vct
+```
+
+```{r}
+(Y <- matrix(rbinom(20, 9, 0.45), nrow=4)) #adding brackets around prints the result
+```
+
+```{r}
+apply(Y, MARGIN=2, FUN=sum) #sum the values in columns
+```
+
+```{r}
+apply(Y, 1, function(x) x^2+x) #can use lambda functions
+```
+
+```{r}
+sapply(12:14, seq) #applies function to a vector, generates three sequences: 1:12, 1:13 and 1:14 (seq(12), seq(13), seq(14))
+```
+
+```{r}
+#Set random seed
+set.seed(2019)
+runif(3) #uniform U(0,1) distribution
+```
+
+```{r}
+#at any moment we can save the current random seed
+current.seed <- .Random.seed
+```
+
+```{r}
+runif(3)
+```
+
+```{r}
+runif(3)
+```
+
+```{r}
+current.seed -> .Random.seed #resets the seed
+runif(5) #we get the same sequence as before!
+```
+
+```{r}
+y <- c(8,3,5,7,6,6,8,9,2,3,9,4,10,4,11)
+
+sample(y) #permutates the elements (sampling WITHOUT replacement)
+```
+
+```{r}
+sample(y, 3) #samples only 3 elements
+```
+
+```{r}
+sample (y , replace =T ) #with replacement
+```
+
+```{r}
+x <- 1:10
+sample(x[x>8])
+
+```
+
+```{r}
+sample(x[x>9]) #x[x>9] has only one element (10). In this case, sample generates a sequence 1:10 and samples from it instead
+
+#to avoid this behaviour, use resample:
+library(gdata) #need this package for resample function
+
+resample(x[x>8])
+resample(x[x>9])
+```
+
+```{r}
+?resample
+```
+
+From the resample docs: resample differs from the S/R sample function in resample always considers x to be a vector of elements to select from, while sample treats a vector of length one as a special case and samples from 1:x. Otherwise, the functions have identical behavior.
+
+
+## R Subsetting
+
+```{r}
+x <- c(2.1, 4, 6.7, 1.75)
+```
+
+```{r}
+x[c(1,3)] #get first and third element
+```
+
+```{r}
+x[c(1,1,3,3)] #duplicate indices work
+```
+
+```{r}
+x[sort(x)] #doubles are rounded to ints for indexing
+```
+
+```{r}
+#negative integers exclude elements
+x[-c(1,3)]
+```
+
+```{r}
+#cannot use positive and negative at the same time
+x[c(1,-3)]
+```
+
+```{r}
+x[c(T, T, F, T)] #logical vectors work as masks
+```
+
+```{r}
+x[c(TRUE, FALSE)] #if the selection vector is too short, it is repeated (as c(T,F,T,F))
+```
+
+```{r}
+x[0] #returns a 0-length vector
+```
+
+```{r}
+#Named vectors are just like dictionaries
+#some useful constant vectors: LETTERS (capital letters), letters (lowercase), month.abb, month.name
+```
+
+```{r}
+y <- setNames(x, LETTERS[1:length(x)])
+y
+```
+
+```{r}
+y["A"] #access through the character indices
+```
+
+```{r}
+y[c('A', 'A', 'D')]
+```
+
+```{r}
+#Subsetting with factors uses the underlying integer vector, not the character!
+y[factor("B")] #returns the first element, because "B" in the factor is stored as a 1
+#In general, avoid using factors for subsetting
+```
+
+```{r}
+#outer = cartesian product
+outer(1:3, 1:3)
+```
+
+```{r}
+#a function can be specified to edit the generated elements
+#paste = converts arguments to characters, and concatenates them (with a separator if specified)
+
+v <- outer(1:5, 1:5, FUN="paste", sep=",")
+v
+```
+
+```{r}
+v[seq(3, 23, 5)] #we can access elements in the matrix as if it were a "flattened vector"
+#(matrices are internally stored as sequential data)
+```
+
+```{r}
+#Preserve original dimension when subsetting: DROP=FALSE
+(S <- matrix(1:6, nrow=2))
+```
+
+```{r}
+S[1,] #normally returns a vector
+```
+
+```{r}
+S[1, , drop=FALSE] #returns a (1,3) matrix instead
+```
+
+```{r}
+#Lists are like "trains". [[]] gets the content of a vagon, [] just the vagon itself
+xl <- list(1:3, "one", c(T,F,F)) #3 "vagons"
+```
+
+```{r}
+xl[1] #first vagon, returned as a LIST
+```
+
+```{r}
+xl[[1]] #first vagon, returned as VECTOR (=content of the "vagon")
+```
+
+```{r}
+xl[1:2] #subset the list
+```
+
+```{r}
+xl[[1:3]] # = xl[[1]][[2]]
+```
+
+```{r}
+xl[[1]][[3]]
+```
+
+## Loops
+
+```{r}
+#Define a factorial function
+fact1 <- function(x)
+{
+    f <- 1
+    if (x < 2) return (1)
+    for (i in 2:x) {
+        f <- f*i
+    }
+    return (f)
+}
+```
+
+```{r}
+sapply(1:5, fact1)
+```
+
+```{r}
+#with a while loop instead
+fact2 <- function(x) {
+    f <- 1; t <- x
+    while (t > 1) {
+        f <- f*t
+        t <- t-1
+    }
+    return(f)
+}
+```
+
+```{r}
+sapply(1:5, fact2)
+```
+
+```{r}
+fac3 <- function(x) {
+    f <- 1; t <- x
+    repeat { #= while(1)
+        if (t<2) break
+        f <- f*t
+        t <- t-1
+    }
+    return(f)
+}
+sapply(1:5, fac3)
+```
+
+```{r}
+cumprod(1:5) #cumulative product
+```
+
+```{r}
+#Better way: use already defined (vectorized) functions!
+fac4 <- function(x) max(cumprod(1:x))
+```
+
+```{r}
+sapply(1:5, fac4)
+```
+
+```{r}
+#Also now there is the factorial function:
+sapply(1:5, factorial)
+```
+
+```{r}
+#AVOID LOOPS!
+```
+
+```{r}
+#Es. use ifelse vectorized function
+y <- log(rpois(20,1.5))
+y
+```
+
+```{r}
+mean(y)
+```
+
+```{r}
+(y <- ifelse(y<0, NA, y)) #negative values are set to NA
+
+mean(y, na.rm=TRUE) #so that they can be avoided by functions
+```
+
+```{r}
+x <- runif(50000000)
+str(x)
+```
+
+```{r}
+head(x)
+tail(x)
+```
+
+```{r}
+system.time(max(x))
+```
+
+```{r}
+pc <- proc.time()
+cmax <- x[1]
+for (i in 2:length(x)) { if (x[i]>cmax) cmax <- x[i]}
+proc.time()-pc
+```
+
+```{r}
+test1 <- function(n) {
+    y <- 1:n #optimized
+}
+
+test2 <- function(n) {
+    y <- numeric(n) #empty array
+    for (i in 1:n)  #initialize with for loop
+        y[i] <- i
+}
+
+test3 <- function(n) { 
+    y <- NULL
+    for (i in 1:n) #even worse
+        y <- c(y,i) #creates a new array every time!
+}
+```
+
+```{r}
+system.time(test1(10000000))
+system.time(test2(10000000))
+#system.time(test3(10000000)) too long
+```
+
+```{r}
+
+```

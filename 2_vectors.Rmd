@@ -1,0 +1,523 @@
+---
+jupyter:
+  jupytext:
+    text_representation:
+      extension: .Rmd
+      format_name: rmarkdown
+      format_version: '1.2'
+      jupytext_version: 1.3.2
+  kernelspec:
+    display_name: R
+    language: R
+    name: ir
+---
+
+Two data types: **vectors** and **nodes**.
+Vectors can be:
+- Atomic: all elements of the same type
+- List
+- NULL: generic zero-length vector
+
+Vector attributes:
+- Dimension
+- Class: for OOP
+
+
+**Atomic vectors**
+- Logical (boolean)
+- double (decimal, scientific (12.3E4), or hex)
+- integer (L suffix)
+- character (strings)
+- complex
+- raw (bytes)
+
+```{r}
+?Quotes #how to represent various characters
+```
+
+```{r}
+x <- 3 #create a simple vector
+```
+
+```{r}
+x
+```
+
+```{r}
+str(x) #print the structure of x, 'num' = numeric
+```
+
+```{r}
+class(x)
+```
+
+```{r}
+typeof(x)
+```
+
+```{r}
+length(x)
+```
+
+```{r}
+y <- 3L #integer
+class(y)
+typeof(y)
+length(y)
+str(y)
+```
+
+```{r}
+z <- x>0 #create a logical vector
+class(z)
+typeof(z)
+length(z)
+str(z)
+```
+
+```{r}
+w <- 'three' #character
+class(w)
+typeof(w)
+length(z)
+str(z)
+```
+
+Scalar do not exist: they are one-element vectors
+
+```{r}
+?c #concatenate function
+```
+
+```{r}
+x <- c(1)
+str(x)
+```
+
+```{r}
+x <- c(3, 5, 6, 3, 1, 2, -10)
+str(x)
+length(x)
+```
+
+Vectors cannot be extended - you need to create a longer vector and then copy the older one.
+
+```{r}
+0:10 #sequence (endpoints are included)
+```
+
+```{r}
+15:5 #backward sequence
+```
+
+```{r}
+seq(-2, 3, 0.5) #as in np.arange
+```
+
+```{r}
+seq(from=0.04, to=0.15, length=6) #as np.linspace
+```
+
+```{r}
+rep(9, 5) #constant vectors
+```
+
+```{r}
+rep(1:4, 2) #replicate sequence (np.tile)
+```
+
+```{r}
+rep(1:4, each=2, times=3) #np.repeat + np.tile
+```
+
+```{r}
+rep(1:4, 1:4) #np.repeat with a np.arange
+```
+
+```{r}
+rep(c("cat", "dog", "mouse"), c(2,3,2))
+```
+
+## Indeterminate forms
+
+```{r}
+4/0
+```
+
+```{r}
+-15/0
+```
+
+```{r}
+exp(-Inf) #infinity are propagated!
+```
+
+```{r}
+0/Inf
+```
+
+```{r}
+(0:3)^Inf
+```
+
+```{r}
+0/0
+Inf - Inf
+Inf/Inf
+```
+
+```{r}
+#Test infinites
+x <- -4.5
+is.finite(x)
+
+is.infinite(c(-4.5, 0/0, exp(Inf)))
+
+is.nan(c(-4.5, 0/0, exp(Inf)))
+```
+
+## Unknown values
+
+```{r}
+#Missing data are represented as NA
+NA > 0; 2.7*NA; ! NA #normally all operations on NA result in NA
+```
+
+```{r}
+#except for operations with a unique result
+NA^0
+NA |  TRUE
+NA & FALSE
+```
+
+```{r}
+y <- c(4, NA, -8)
+
+y == NA #does not work to check the NA
+y == "NA" #NA is not a string!
+
+#should use:
+is.na(y)
+```
+
+```{r}
+#Remove NA
+y[! is.na(y)]
+```
+
+```{r}
+#Some operations can "skip" NAs
+v1 <- c(1:7, NA, 2:8, NA, 3:9)
+str(v1)
+```
+
+```{r}
+mean(y) #NA "ruin" the operation
+```
+
+```{r}
+mean(v1, na.rm=TRUE) #remove the NA before computing the mean
+```
+
+```{r}
+#Get indices of NAs
+seq(along=v1) #create sequence of all indices
+
+seq(along=v1)[is.na(v1)] #select only the ones that correspond to NAs
+```
+
+```{r}
+#or simpler way:
+which(is.na(v1))
+```
+
+```{r}
+#Replace NAs with a value (e.g. 0)
+v1[is.na(v1)] <- 0
+v1
+```
+
+```{r}
+#Equivalently
+v1[which(is.na(v1))] <- 0
+v1
+```
+
+```{r}
+ifelse(is.na(v1), 0, v1) #vectorized ifelse (np.where)
+```
+
+```{r}
+probe <- 1:5
+```
+
+```{r}
+probe
+```
+
+```{r}
+probe[-1] #remove the first
+```
+
+```{r}
+#Create a function to remove the smallest two values and larges two values
+trim <- function(x) {
+    sort(x)[-c(1,2, length(x)-1, length(x))] #remove with the -
+}
+```
+
+```{r}
+probe <- c(4, 7, 6, 5, 6, 7)
+probe
+```
+
+```{r}
+trim(probe)
+```
+
+## Vectors attributes
+
+```{r}
+counts <- c(25, 12, 7, 4, 6, 2, 1, 0, 2)
+attr(counts, "nx") <- "count1"
+attr(counts, "ny") <- "events"
+```
+
+```{r}
+attr(counts, "nx")
+```
+
+```{r}
+attributes(counts)
+```
+
+Achtung! Many operations *destroy* attributes.
+
+```{r}
+x <- c(a = 1, b = 2, c = 3)
+str(x) #give names to the elements
+```
+
+```{r}
+x <- 1:3
+names(x) <- c("a", "b", "c")
+str(x)
+```
+
+```{r}
+x <- setNames(1:3, c("a", "b", "c"))
+str(x)
+```
+
+```{r}
+names(x)
+```
+
+```{r}
+#Remove
+unname(x)
+
+#or
+names(x) <- NULL
+str(x)
+```
+
+```{r}
+#for example, set names to represent histogram labels
+counts <- c(25, 12, 7, 4, 6, 2, 1, 0, 2)
+names(counts) <- 0:(length(counts)-1)
+str(counts)
+```
+
+```{r}
+hist(counts) #does not use names
+```
+
+```{r}
+barplot(counts) #use names
+```
+
+```{r}
+v1 <- c(1:20)
+dim(v1) <- c(4,5) #np.reshape to 2d array
+class(v1)
+str(v1)
+```
+
+```{r}
+v1
+```
+
+```{r}
+v1 <- c(1:20)
+dim(v1) <- c(2, 5, 2) #np.reshape to 3d array
+
+str(v1)
+```
+
+```{r}
+v1
+```
+
+```{r}
+#Sum all elements less than 5
+x <- 0:10
+sum(x[x<5])
+```
+
+## S3 atomic vectors
+S3 is the basic object system in R. 
+- factor vectors (categorical data)
+- Date vectors (day resolution)
+- POSIXct/POSIXlt vectors (second resolution)
+- difftime vectors (durations)
+
+
+```{r}
+x <- factor(c("a", "b", "c", "d")) #factor
+str(x)
+typeof(x)
+attributes(x)
+```
+
+```{r}
+coord <- factor(c("Est", "West", "Est", "North"), levels = c("North", "Est", "South", "West"))
+table(coord) #count occurrences
+```
+
+```{r}
+#ordered factors (when order matters)
+#e.g. security level
+grade <- ordered(c("high", "low", "medium", "medium"), levels = c("low", "medium", "high"))
+str(grade)
+```
+
+```{r}
+summary(grade)
+```
+
+```{r}
+barplot(table(grade))
+```
+
+```{r}
+#read.csv(), data.frame(), etc. convert character vectors to factors. Can disable with stringsAsFactors = FALSE
+```
+
+```{r}
+today <- Sys.Date(); today #date
+```
+
+```{r}
+typeof(today)
+class(today)
+```
+
+```{r}
+yesterday <- as.Date("2020-03-14")
+yesterday
+```
+
+```{r}
+delta <- today - yesterday
+str(delta)
+class(delta) #difftime
+```
+
+```{r}
+#internal representation is accessed with unclass
+unclass(today) #= number of days since 1970-01-01
+```
+
+```{r}
+#POSIX = Portable Operating System Interface, a standard from UNIX
+#ct = calendar time (time_t in C)
+#lt = local time    (struct_tm type in C)
+```
+
+```{r}
+now_ct <- as.POSIXct(Sys.time(), tzone="CET")
+now_ct
+```
+
+```{r}
+r20bday_ct <- as.POSIXct("2020-02-29 12:00", tzone="CET")
+now_ct - r20bday_ct
+```
+
+```{r}
+structure(now_ct, tzone="Europe/Rome")
+structure(now_ct, tzone="Europe/Moscow") #edits only the formatting, not the internal representation
+structure(now_ct, tzone="Asia/Chongqing")
+```
+
+```{r}
+#time durations
+one_week <- as.difftime(1, units="weeks")
+attributes(one_week)
+```
+
+```{r}
+today <- Sys.time()
+next_week <- today + one_week
+structure(next_week, tzone="Europe/Rome")
+```
+
+```{r}
+forty_min <- as.difftime(40, units="mins")
+```
+
+## Unique and duplicated
+
+```{r}
+names <- c("John", "John", "Jim", "Anna", "Beatrix", "Anna")
+table(names)
+```
+
+```{r}
+unique(names)
+```
+
+```{r}
+duplicated(names) #mark elements that have appeared before
+```
+
+```{r}
+names[!duplicated(names)] #same as unique
+```
+
+```{r}
+setA <- c("a", "b", "c", "d", "e")
+setB <- c("d", "e", "f", "g")
+
+union(setA, setB)
+```
+
+```{r}
+intersect(setA, setB)
+```
+
+```{r}
+setdiff(setA, setB)
+```
+
+```{r}
+setdiff(setB, setA)
+```
+
+```{r}
+setequal(setA, setA)
+setequal(setA, setB)
+```
+
+```{r}
+setA %in% setB #marks elements in the intersection
+```
+
+```{r}
+9E-4/0.05
+```
+
+```{r}
+
+```
