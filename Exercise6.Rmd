@@ -1,0 +1,423 @@
+---
+jupyter:
+  jupytext:
+    text_representation:
+      extension: .Rmd
+      format_name: rmarkdown
+      format_version: '1.2'
+      jupytext_version: 1.3.2
+  kernelspec:
+    display_name: R
+    language: R
+    name: ir
+---
+
+```{r}
+options(repr.plot.width=8, repr.plot.height=5) #set a common width/height for plots
+```
+
+# Exercise 1
+The number of particles emitted by a radioactive source during a fixed interval of time ($\Delta t = 10$s) follows a Poisson distribution on the parameter $\mu$. The number of particles observed during consecutive time intervals is $4$, $1$, $3$, $1$ and $3$.
+
+(a) Suppose a uniform prior distribution for the parameter $\mu$.
+- determine and draw the posterior distribution for $\mu$, given the data
+
+```{r}
+data   <- c(4, 1, 3, 1, 3)
+deltat <- 10
+
+likelihood_a <- function(mu, data) {
+    res <- 1
+    
+    for (datum in data) {
+        res <- res * dpois(datum, lambda=mu)
+    }
+    
+    return(res)
+}
+
+posterior_a <- function(mu, data) {
+    #Posterior is just proportional to the likelihood, so we just need to normalize it
+    norm <- integrate(likelihood_a, lower=0, upper=20, data=data)$value
+    return(likelihood_a(mu, data) / norm)
+}
+```
+
+```{r}
+plot(0, 0, "n", xlim=c(0, 10), ylim=c(0,.6), xlab=expression(mu), ylab="Posterior", main="Poisson Process - Uniform prior")
+curve(posterior_a(x, data), from=0, to=10, add=TRUE) #Numerically, by normalizing the likelihood (as the prior is a uniform)
+curve(dgamma(x, sum(data) + 1, rate=length(data)), add=TRUE, col='red', lwd=2, lty=2)
+legend("topright", legend=c("Numerical", "Analytical"), lwd=c(1,2), lty=c(1,2), col=c("black", "red"), y.intersp=1.5)
+#Analytically, the posterior for a poisson process with uniform prior is a Gamma pdf with alpha = sum(x_j) + 1 and lambda=n,
+#where {x_j}_{j=1,...,n} are the n Poisson observations
+```
+
+- Evaluate mean, median and variance, both analytically and numerically in R
+
+```{r}
+#Analytically, the posterior is a Gamma distribution with parameters:
+alpha  <- sum(data) + 1
+lambda <- length(data)
+
+mean_analytic <- alpha / lambda
+#There is no simple closed form for the median
+variance_analytic <- alpha / (lambda^2)
+```
+
+```{r}
+#Numerically
+mean_numeric   <- integrate(function(x) x * dgamma(x, alpha, rate=lambda), lower=0, upper=20)$value
+median_numeric <- qgamma(.5, shape=alpha, rate=lambda)
+variance_numeric <- integrate(function(x) (x - mean_numeric)^2 * dgamma(x, alpha, rate=lambda), lower=0, upper=50)$value
+```
+
+```{r}
+sprintf("Mean: Analytic %.3f, Numeric %.3f", mean_analytic, mean_numeric)
+sprintf("Median: Numeric %.3f", median_numeric)
+sprintf("Variance: Analytic %.3f, Numeric %.3f", variance_analytic, variance_numeric)
+```
+
+(b) Suppose a Jeffrey's prior for the parameter $\mu$
+- Determine and draw the posterior distribution for $\mu$, given the data.
+
+
+The posterior for a Poisson process, given a Jeffrey's prior, is a Gamma distribution $\Gamma(\alpha, \lambda)$ with:
+$$ \alpha = \sum_{j=1}^n x_j + \frac{1}{2}; \qquad \lambda = n $$
+
+```{r}
+posterior_b <- function(mu, data) {
+    alpha <- sum(data) + 1/2
+    lambda <- length(data)
+    
+    return(dgamma(mu, alpha, rate=lambda))
+}
+
+plot(0,0, "n", xlab=expression(mu), ylab="Posterior", main="Poisson Process - Jeffrey's prior", xlim=c(0,10), ylim=c(0,.6))
+curve(posterior_b(x, data), from=0, to=10, lwd=2, add=TRUE)
+```
+
+- Evaluate mean, median and variance, both analytically and numerically in R
+
+```{r}
+#Analytically, the posterior is a Gamma distribution with parameters:
+alpha2  <- sum(data) + 1/2
+lambda2 <- length(data)
+
+mean_analytic2 <- alpha2 / lambda2
+#There is no simple closed form for the median
+variance_analytic2 <- alpha2 / (lambda2^2)
+```
+
+```{r}
+#Numerically
+mean_numeric2   <- integrate(function(x) x * dgamma(x, alpha2, rate=lambda2), lower=0, upper=20)$value
+median_numeric2 <- qgamma(.5, shape=alpha2, rate=lambda2)
+variance_numeric2 <- integrate(function(x) (x - mean_numeric)^2 * dgamma(x, alpha2, rate=lambda2), lower=0, upper=50)$value
+```
+
+```{r}
+sprintf("Mean: Analytic %.3f, Numeric %.3f", mean_analytic2, mean_numeric2)
+sprintf("Median: Numeric %.3f", median_numeric2)
+sprintf("Variance: Analytic %.3f, Numeric %.3f", variance_analytic2, variance_numeric2)
+```
+
+(c) Evaluate a $95\%$ credibility interval for the results obtained with both priors. Compare the result with that obtained using a normal approximation for the posterior distribution, with the same mean and standard deviation.
+
+```{r}
+#Uniform prior
+left_side_a <- qgamma(.025, alpha, rate=lambda)
+right_side_a <- qgamma(1-.025, alpha, rate=lambda)
+
+#Jeffrey's prior
+left_side_b <- qgamma(.025, alpha2, rate=lambda2)
+right_side_b <- qgamma(1-.025, alpha2, rate=lambda2)
+
+#Normal approximation
+norm_left_a <- mean_numeric - 1.96 * sqrt(variance_numeric)
+norm_right_a <- mean_numeric + 1.96 * sqrt(variance_numeric)
+
+norm_left_b <- mean_numeric2 - 1.96 * sqrt(variance_numeric2)
+norm_right_b <- mean_numeric2 + 1.96 * sqrt(variance_numeric2)
+```
+
+```{r}
+par(mfrow=c(1,2))
+
+plot(0, 0, "n", xlim=c(0, 10), ylim=c(0,.6), xlab=expression(mu), ylab="Posterior", main="Uniform prior")
+curve(dgamma(x, sum(data) + 1, rate=length(data)), add=TRUE, col='black', lwd=2, lty=1)
+abline(v=c(left_side_a, right_side_a), lty=2)
+abline(v=c(norm_left_a, norm_right_a), lty=3, col='red')
+legend("topright", legend=c("CI", "Normal appr."), lwd=c(1,1), lty=c(2,3), col=c("black", "red"), y.intersp=1.5, cex=.6)
+
+plot(0,0, "n", xlab=expression(mu), ylab="Posterior", main="Jeffrey's prior", xlim=c(0,10), ylim=c(0,.6))
+curve(posterior_b(x, data), from=0, to=10, lwd=2, add=TRUE)
+abline(v=c(left_side_b, right_side_b), lty=2)
+abline(v=c(norm_left_b, norm_right_b), lty=3, col='red')
+legend("topright", legend=c("CI", "Normal appr."), lwd=c(1,1), lty=c(2,3), col=c("black", "red"), y.intersp=1.5, cex=.6)
+#Plot also normal
+```
+
+# Exercise 2
+Given the problem of the lighthouse discussed last week, study the case in which both the position along the shore ($\alpha$) and the distance out at sea ($\beta$) are unknown.
+![image.png](attachment:image.png)
+
+```{r}
+#True parameters
+alpha.true <- 1 #[km]
+beta.true  <- .8 #[km]
+
+#Generate data
+rlighthouse <- function(num, alpha, beta) {
+    angles <- runif(num, min=-pi/2, max=pi/2)
+    
+    xk <- beta * tan(angles) + alpha
+    
+    return(xk)
+}
+```
+
+```{r}
+data <- rlighthouse(10, alpha.true, beta.true)
+```
+
+As the lighthouse emits uniformly, $\mathbb{P}(\theta_k|\alpha,\beta) = 1/\pi$. Each signal is received at $x_k = \beta \tan \theta_k + \alpha$, following a distribution given by the change of random variables, leading to a **Cauchy** distribution:
+$$\mathbb{P}(x|\alpha,\beta) = \mathbb{P}(\theta|\alpha,\beta) \left|\frac{\mathrm{d}\theta}{\mathrm{d}x}\right| = \frac{1}{\pi} \frac{\beta}{\beta^2 + (x-\alpha)^2} $$
+
+The likelihood is given by the product of probabilities of the $N$ detections:
+$$P(\mathrm{Data} |\alpha, \beta) = \prod_{j=1}^N \mathbb{P}(x_j|\alpha,\beta) $$
+
+```{r}
+lighthouse.likelihood.log <- function(alpha, beta, data) {
+    return(log(prod(dcauchy(data, alpha, beta))))
+}
+```
+
+```{r}
+#Prior: uniform both in alpha and beta
+alpha.min <- -6
+alpha.max <- 6
+
+beta.min <- 0.1
+beta.max <- 5
+
+resolution <- 100
+```
+
+```{r}
+#install.packages("emdbook")
+```
+
+```{r}
+library("emdbook")
+```
+
+```{r}
+curve3d(lighthouse.likelihood.log(x, y, data), from=c(alpha.min, beta.min), to=c(alpha.max, beta.max),
+        n = c(resolution, resolution), sys3d="image", .progress="text")
+curve3d(lighthouse.likelihood.log(x, y, data), from=c(alpha.min, beta.min), to=c(alpha.max, beta.max),
+        n = c(resolution, resolution), sys3d="contour", add=TRUE, .progress="text")
+```
+
+```{r}
+optim(c(2,1), function(vec) -lighthouse.likelihood.log(vec[1], vec[2], data))
+```
+
+```{r}
+?integrate
+```
+
+```{r}
+#Marginalizing
+
+plot(0, 0, "n", xlim=c(0, 10), ylim=c(0,.6), xlab=expression(mu), ylab="Posterior", main="Uniform prior")
+curve(integrate(function(y) lighthouse.likelihood.log(x, y, data), lower=beta.min, upper=beta.max)$value, from=alpha.min, to=alpha.max)
+```
+
+```{r}
+#FINISH
+```
+
+# Exercise 3
+Given the signal over background example discussed last week, analyze and discuss the following cases:
+
+(a) Vary the sampling resolution of used to generate the data, keeping the same sampling range:
+```R
+xdat <- seq(from=-7*w, to=7*w, by=0.5*w)```
+
+- Change the resolution $w = \{0.1, 0.25, 1, 2, 3\}$
+- Check the effect on the results
+
+
+The number $\{N_k\}$ of photons measured at positions $\{x_k\}$ is a Poisson random variable:
+$$P(N|S) = \frac{S^N e^{-S}}{N!} $$
+where:
+$$S_k = \Delta t \left[A \exp\left( - \frac{(x_k - x_0)^2}{2w^2} \right) + B\right] \tag{1}$$
+and $\Delta t$ is the **exposure time**, $x_0$ and $w$ are the **centre** and **width** of the signal peak, $A$ and $B$ are the signal and background **amplitudes**. 
+
+The *likelihood* of the data $D = \{N_k\}$ is given by:
+$$P(D|A,B,M) = \prod_{j} \frac{S_k^{N_k} e^{-S_k}}{N_k!} $$
+
+Assuming a *uniform prior* over $A, B > 0$, the *posterior* is:
+$$ P(A, B|D,M) = \frac{1}{Z} \prod_j \frac{S_k^{N_k} e^{-S_k}}{N_k!} $$
+where $Z$ is the normalization factor. The *log posterior* is then:
+$$L = \log P(A,B|D,M) = \text{const.} + \sum_k [N_k \log S_k - S_k] $$
+
+```{r}
+#---Data generation---#
+signal <- function(x, A, B, x0, w, dt) {
+    #Computes S_k given by (1). 
+    return(dt * (A * exp(-(x-x0)^2/(2*w^2)) + B))
+}
+
+#---(True) model parameters---#
+x0 <- 0 #Signal peak position
+w  <- 1 #Signal width
+A.true <- 2 #Signal amplitude
+B.true <- 1 #Background amplitude
+Delta.t <- 5 #Exposure time
+
+#---Generate data---#
+set.seed(1234)
+binwidth = .5*w
+xdat <- seq(from=-7*w, to=7*w, by=binwidth) #Sampling window
+s.true <- signal(xdat, A.true, B.true, x0, w, Delta.t)
+ddat <- rpois(length(s.true), s.true) #Add noise
+
+xdat.off <- xdat-binwidth/2
+plot(xdat.off, ddat, type='s', col='firebrick3', lwd=2, xlab="x", ylab="Signal+Background counts", ylim=c(0,15))
+curve(signal(x, A.true, B.true, x0, w, Delta.t), from=min(xdat), to=max(xdat), lty=1, lwd=2, col="blue", add=TRUE)
+
+#Add legend
+```
+
+```{r}
+A.lim <- c(0.0, 4.0)
+B.lim <- c(0.5, 1.5)
+K <- 100 #Number of points to sample for each dimension
+
+A.list <- seq(from = A.lim[1], to = A.lim[2], length.out=K)
+B.list <- seq(from = B.lim[1], to = B.lim[2], length.out=K)
+```
+
+```{r}
+#---Posterior vectorized---#
+log.post <- function(data, x, A, B, x0, w, dt) {
+    #if (A < 0 || B < 0) { return(-Inf) } #Prior is uniform over A, B > 0
+    #Add check
+    
+    #Vectorized ver
+    grid_val <- expand.grid(x, A, B)
+    lambdas <- mapply(signal, x=grid_val[,1], A=grid_val[,2], B=grid_val[,3], x0=x0, w=w, dt=Delta.t)
+    
+    n_points <- length(A) * length(B)
+    
+    res <- rowsum(dpois(rep(data, n_points), lambda=lambdas, log=TRUE), rep(seq(1:n_points), each=length(data)))
+    return(matrix(res, nrow=length(A)))
+}
+```
+
+```{r}
+log.post2 <- function(d, x, a, b, x0, w, t) {
+    #non vectorized
+    if ( a < 0 || b < 0 ) { return(-Inf) }
+    sum(dpois(d, lambda=signal(x,a,b, x0, w, t), log=TRUE))
+}
+```
+
+```{r}
+width <- .5
+xdat <- seq(from=-7*width, to=7*width, by=.5*width)
+z <- matrix(data = NA, nrow=length(A.list), ncol=length(B.list))
+for (j in 1:length(A.list)) {
+    for (k in 1:length(B.list)) {
+        z[j,k] <- log.post2(ddat, xdat, A.list[j], B.list[k], x0, w, Delta.t)
+    }
+}
+z <- z-max(z)
+```
+
+```{r}
+contour(A.list, B.list, exp(z),
+        nlevels = 5,
+        labcex = 0.5,
+        lwd = 2,
+        xlab="amplitude , A",
+        ylab="background , B")
+abline(v=2,h=1,col="grey")
+```
+
+```{r}
+width <- .5
+xdat <- seq(from=-7*width, to=7*width, by=.5*width)
+mtx <- log.post(ddat, xdat, A.list, B.list, x0, w, Delta.t)
+mtx <- mtx - max(mtx)
+
+contour(A.list, B.list, exp(mtx),
+    nlevels = 5,
+    labcex = .5,
+    lwd = 2,
+    xlab = "amplitude, A",
+    ylab = "background, B",
+    main = paste("w =",width))
+abline(v=2, h=1, col="grey")
+```
+
+```{r}
+log.post3 <- function(data, x, a, b, x0, w, t) {
+    
+}
+```
+
+```{r}
+#par(mfrow=c(3,2))
+w <- c(0.1,0.25,1,2,3)
+
+for (width in w) {
+    xdat <- seq(from=-7*width, to=7*width, by=.5*width)
+    mtx <- 0
+    mtx <- log.post(ddat, xdat, A.list, B.list, x0, width, Delta.t)
+    mtx <- mtx - max(mtx)
+    
+    contour(A.list, B.list, exp(mtx),
+        nlevels = 5,
+        labcex = .5,
+        lwd = 2,
+        xlab = "amplitude, A",
+        ylab = "background, B",
+        main = paste("w =",width))
+    abline(v=2, h=1, col="grey")
+    
+}
+
+```
+
+(b) Change the ratio $A/B$ used to simulate the data (keeping both positive in accordance with the prior)
+- Check the effect on the results
+
+```{r}
+A.range <- seq(from=.1, to=10, length.out=5)
+
+for (val_A in A.range) {
+    w <- 1
+    xdat <- seq(from=-7*w, to=7*w, by=.5) #Sampling window
+    s.true <- signal(xdat, val_A, B.true, x0, w, Delta.t)
+    ddat <- rpois(length(s.true), s.true) #Add noise
+    
+    mtx <- log.post(ddat, xdat, A.list, B.list, x0, width, Delta.t)
+    mtx <- mtx - max(mtx)
+    
+    contour(A.list, B.list, exp(mtx),
+        nlevels = 5,
+        labcex = .5,
+        lwd = 2,
+        xlab = "amplitude, A",
+        ylab = "background, B",
+        main = paste("w =",width))
+    abline(v=val_A, h=1, col="grey")
+}
+
+```
+
+```{r}
+
+```

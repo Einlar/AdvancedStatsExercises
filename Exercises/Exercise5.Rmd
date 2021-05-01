@@ -1,0 +1,375 @@
+---
+jupyter:
+  jupytext:
+    text_representation:
+      extension: .Rmd
+      format_name: rmarkdown
+      format_version: '1.2'
+      jupytext_version: 1.3.2
+  kernelspec:
+    display_name: R
+    language: R
+    name: ir
+---
+
+```{r}
+options(repr.plot.width=8, repr.plot.height=5) #set a common width/height for plots
+```
+
+## Exercise 1
+A publishing company has recently launched a new journal. In order to determine how effective it is in reaching its possible audience, a market survey company selects a random sample of people from a possible target audience and interviews them. Out of $150$ interviewed people, $29$ have read the last issue of the journal.
+
+a) What kind of distribution would you assume for $y$, the number of people that have seen the last issue of the journal?
+
+
+As all the selected people belong to a certain target audience, we can suppose each of them to have seen the last issue of the journal with some fixed probability $p$. So, in this model $M$, the number $y$ of people that *succeed* in reading the journal will follow a Binomial distribution:
+
+$$P(y|p,n,M) = {n\choose y} p^r (1-p)^{n-r} $$
+where $n = 150$.
+
+
+b) Assuming a uniform prior, what is the posterior distribution for $y$?
+
+
+Assuming $p \sim \mathcal{U}(0,1) = P(p|M)$, the posterior distribution is proportional to the likelihood:
+
+$$P(p|n,y,M) \propto P(y|p,n,M) P(p|M) \propto P(y|p,n,M) $$
+
+
+
+c) Plot both posterior and likelihood distributions functions
+
+```{r}
+par(mfrow=c(1,2))
+
+#Likelihood (is a function of y)
+p = 29/150 #arbitrary choice of p for the plot below (corresponding to the maximum of the posterior)
+xs = seq(0:150)
+plot(xs, dbinom(xs, 150, p), "S", col = 'red', xlab='y', ylab='P(y|p,n,M)', main="Likelihood", xlim=c(10, 50))
+
+#Posterior
+norm <- integrate(function(x) dbinom(29, 150, x), lower=0, upper=1)$value #Normalization factor
+plot(0, 0, "n", xlim=c(0,.4), ylim=c(0,13), xlab='p', ylab='P(p|n,y,M)', main="Posterior")
+curve(dbinom(29, 150, x) / norm, from=0, to=1, col = 'blue', add=TRUE) 
+```
+
+## Exercise 2
+Three students want to construct their prior probability about the proportion of residents that support the building of a new concert hall in their small town.
+
+- Anna thinks that her prior is a beta distribution with mean $0.2$ and a standard deviation of $0.08$
+- Benny moved only recently to this new town and therefore he does not have the slightest idea about it. Therefore he decides to use a uniform prior.
+- Chris believes that his prior should have a trapezoidal shape:
+
+$$f(X) = \begin{cases}
+20x & 0 \leq x < 0.1\\
+2 & 0.1 \leq x < 0.3\\
+5-10x & 0.3 \leq x < 0.5\\
+0 & x \geq 0.5
+\end{cases}
+$$
+
+a) Draw and compare the three prior distributions.
+
+All three distributions have domain in $[0,1]$.
+
+
+In R, the beta distribution is defined by two parameters `shape1`$=a$ and `shape2`$=b$. Mean and variance (from the documentation) are:
+$$E[X] = \frac{a}{a+b}; \qquad \mathrm{Var}[X] = \frac{ab}{(a+b)^2 (a+b+1)}$$
+By solving the system:
+$$\begin{cases}E[X] = 0.2 \\ \mathrm{Var}[X] = 0.08^2\end{cases}$$
+we find $a=4.8$ and $b=19.2$.
+
+```{r}
+f <- function(x) {
+    return( ifelse(0 <= x & x < 0.1,  20 * x, 
+            ifelse(0.1 <= x & x < 0.3, 2,
+            ifelse(0.3 <= x & x < 0.5, 5 - 10*x, 0))) / .7 #Normalization (trapezoid area)
+          )
+}
+
+plot(0, 0, "n", xlim=c(0, 1), ylim=c(0,6), main="Priors", xlab="x", ylab="p(x)")
+curve(dbeta(x, 4.8, 19.2), col="black", lwd=2, lty=1, add=TRUE)
+curve(1 + 0*x, col="red", lwd=2, lty=2, add=TRUE)
+curve(f(x), col="blue", lwd=2, lty=3, add=TRUE)
+
+legend(0.8,6, legend=c("Anna", "Benny", "Chris"), lty=c(1,2,3), col=c("black", "red", "blue"), y.intersp=1.5)
+```
+
+The next day the three students decide to interview a sample of $100$ citizens of the small town, asking for their opinion. Out of the interviewed sample, $26$ support the building of the new concert hall.
+
+b) Evaluate and draw the three posterior distributions.
+
+
+Assuming a Binomial distribution for the Likelihood:
+$$P(y|p,n,M) = {n\choose y} p^r (1-p)^{n-r} $$
+
+The posterior is given by:
+$$P(p|n,y,M) = \frac{1}{Z} P(y|p,n,M) P(p|M) $$
+where $Z$ is the normalization factor.
+
+For a beta prior with parameters $(\alpha_p, \beta_p)$ and a binomial likelihood with $y$ successes over $n$ cases, the posterior is still a beta distribution with parameters:
+$$\alpha = \alpha_p + y; \qquad \beta = \beta_p + n - y$$
+Noting that a uniform distribution is just a beta distribution with $\alpha=\beta=1$, this formula allow to directly compute the posterior for both Anna and Benny. In Chris' case, however, it is necessary to proceed numerically.
+
+```{r}
+n = 100
+y = 26
+
+anna_posterior <- function(p) {
+    return(dbeta(p, 4.8 + y, 19.2 + n - y))
+}
+
+benny_posterior <- function(p) {
+    return(dbeta(p, 1 + y, 1 + n - y))
+}
+
+chris_posterior <- function(p) {
+    return(f(p) * dbinom(y, n, p))
+}
+
+chris_posterior_normalized <- function(p) {
+    norm <- integrate(chris_posterior, 0, 1)
+    return(chris_posterior(p) / norm[["value"]])
+}
+```
+
+```{r}
+plot(0, 0, "n", xlim=c(.1, .4), ylim=c(0,10), main="Posteriors", xlab="x", ylab="p(x)")
+curve(anna_posterior(x), col="black", lwd=2, lty=1, add=TRUE)
+curve(benny_posterior(x), col="red", lwd=2, lty=2, add=TRUE)
+curve(chris_posterior_normalized(x), col="blue", lwd=2, lty=3, add=TRUE)
+
+legend("topright", legend=c("Anna", "Benny", "Chris"), lty=c(1,2,3), col=c("black", "red", "blue"), y.intersp=1.5)
+```
+
+c) Give an estimate of the most probable value and the $95\%$ credibility interval.
+
+
+The most probable value corresponds to the *maximum* of the posterior (mode).
+
+```{r}
+max_anna  <- optimize(anna_posterior, interval=c(0,1), maximum=TRUE)$maximum
+max_benny <- optimize(benny_posterior, interval=c(0,1), maximum=TRUE)$maximum
+max_chris <- optimize(chris_posterior_normalized, interval=c(0,1), maximum=TRUE)$maximum
+```
+
+```{r}
+sprintf("Most probable p:")
+sprintf("Anna: %.3f, Benny: %.3f, Chris: %.3f", max_anna, max_benny, max_chris)
+```
+
+For the $95\%$ credibility interval, a range $[x^*-r,x^*+r]$ is (arbitrarily) selected to be symmetric with respect to the mode $x^*$, and such that:
+$$ \int_{x^*-r}^{x^*+r} p(x) = .95 $$
+
+```{r}
+central_integral <- function(func, center, r, ...) {
+    #Computes the integral of func(x) over [max(center-r,0), min(1,center+r)]
+    return(integrate(func, max(center-r,0), min(1,center+r), ...)[["value"]])
+}
+
+radius_ci <- function(func, center, ci, ...) {
+    #Returns the radius r necessary for an interval centered on @center to cover 95% of the @func area
+    return(uniroot(function(r) central_integral(func, center, r, ...) - ci, interval=c(0,1))$root)
+}
+```
+
+```{r}
+r_anna <- radius_ci(anna_posterior, max_anna, .95)
+r_benny <- radius_ci(benny_posterior, max_benny, .95)
+r_chris <- radius_ci(chris_posterior_normalized, max_chris, .95)
+```
+
+```{r}
+sprintf("Credibility Intervals 95%%:")
+sprintf("Anna: [%.3f,%.3f], Benny: [%.3f,%.3f], Chris: [%.3f,%.3f]", max_anna-r_anna,   max_anna+r_anna,
+                                                                     max_benny-r_benny, max_benny+r_benny,
+                                                                     max_chris-r_chris, max_chris+r_chris)
+```
+
+```{r}
+#Plot of Posteriors with CI
+
+n = 100
+y = 26
+
+par(mfrow=c(1,3))
+
+plot(0, 0, "n", xlim=c(0.1, 0.4), ylim=c(0,11), main="Anna", xlab="x", ylab="p(x)")
+abline(v=c(max_anna), col="black")
+abline(v=c(max_anna-r_anna, max_anna+r_anna), col="aquamarine3")
+curve(anna_posterior(x), col="black", lwd=2, lty=1, add=TRUE)
+
+plot(0, 0, "n", xlim=c(0.1, 0.4), ylim=c(0,11), main="Benny", xlab="x", ylab="p(x)")
+abline(v=c(max_benny), col="red")
+abline(v=c(max_benny-r_benny, max_benny+r_benny), col="aquamarine3")
+curve(benny_posterior(x), col="red", lwd=2, lty=2, add=TRUE)
+
+plot(0, 0, "n", xlim=c(0.1, 0.4), ylim=c(0,11), main="Chris", xlab="x", ylab="p(x)")
+abline(v=c(max_chris), col="blue")
+abline(v=c(max_chris-r_chris, max_chris+r_chris), col="aquamarine3")
+curve(chris_posterior_normalized(x), col="blue", lwd=2, lty=3, add=TRUE)
+```
+
+## Exercise 3
+A coin is flipped $n=30$ times with the following outcomes:
+`T, T, T, T, T, H, T, T, H, H, T, T, H, H, H, T, H, T, H, T, H, H, T, H, T, H, T, H, H, H`
+
+a) Assuming a flat prior, and a beta prior, plot the likelihood, prior and posterior distributions for the data set.
+
+```{r}
+outcomes <- c('T', 'T', 'T', 'T', 'T', 'H', 'T', 'T', 'H', 'H', 'T', 'T', 'H', 'H', 'H', 'T',
+              'H', 'T', 'H', 'T', 'H', 'H', 'T', 'H', 'T', 'H', 'T', 'H', 'H', 'H')
+```
+
+```{r}
+par(mfrow=c(1,3))
+
+#---Prior---#
+beta_prior_a <- 5 #parameters for beta prior. if alpha = beta => mean = 1/2, mode = 1/2; rising alpha leads to a "narrower" pdf
+beta_prior_b <- 7 #Let's try a != b, to see the "evolution" of a slighty biased pdf
+
+plot(0, 0, "n", xlim=c(0, 1), ylim=c(0,4), main="Priors", xlab="x", ylab="p(x)")
+curve(1 + 0*x, col="black", lwd=2, lty=1, add=TRUE) #Flat pdf
+curve(dbeta(x, beta_prior_a, beta_prior_b), col="red", lwd=2, lty=2, add=TRUE) 
+
+legend("topright", legend=c("Flat", "Beta"), lty=c(1,2), col=c("Black", "red"), y.intersp=1.5)
+
+#---Likelihood---#
+#Likelihood is binomial. Here is plotted with p=0.5, as outcomes contains exactly 15 heads and 15 tails
+(table(outcomes))
+
+xs = seq(0:length(outcomes))
+p = .5
+plot(xs, dbinom(xs, length(outcomes), .5), "S", col = 'black', lwd=2, xlab='y', ylab='P(y|p,n,M)', main="Likelihood")
+
+
+#---Posterior---#
+#As in both cases the prior is a beta distribution (the uniform is the particular case when $\alpha=\beta=1$),
+#and the likelihood is a binomial, the posteriors will be two beta distributions:
+n = length(outcomes)
+h = sum(outcomes == 'H')
+
+flat_posterior <- function(x) {
+    return(dbeta(x, 1 + h, 1 + n - h))
+}
+
+beta_posterior <- function(x) {
+    return(dbeta(x, beta_prior_a + h, beta_prior_b + n - h))
+}
+
+plot(0, 0, "n", xlim=c(0, 1), ylim=c(0,11), main="Posteriors", xlab="x", ylab="p(x)")
+curve(flat_posterior(x), col="black", lwd=2, lty=1, add=TRUE)
+curve(beta_posterior(x), col="red", lwd=2, lty=2, add=TRUE)
+legend("topright", legend=c("Flat prior", "Beta prior"), lty=c(1,2), col=c("black", "red"), y.intersp=1.5)
+```
+
+b) Evaluate the most probable value for the coin probability $p$ and, integrating the posterior probability distribution, give an estimate for a $95\%$ credibility interval.
+
+```{r}
+max_flat <- optimize(flat_posterior, interval=c(0,1), maximum=TRUE)$maximum
+max_beta <- optimize(beta_posterior, interval=c(0,1), maximum=TRUE)$maximum
+
+sprintf("Most probable values for p:")
+sprintf("Uniform prior: %.3f, Beta prior: %.3f", max_flat, max_beta)
+
+#Credibility intervals are (arbitrarily) selected as symmetric around the mode
+r_flat <- radius_ci(flat_posterior, max_flat, .95)
+r_beta <- radius_ci(beta_posterior, max_beta, .95)
+
+sprintf("Credibility intervals 95%%:")
+sprintf("Uniform prior: [%.3f,%.3f], Beta prior: [%.3f, %.3f]", max_flat-r_flat, max_flat+r_flat,
+                                                                max_beta-r_beta, max_beta+r_beta)
+
+plot(0, 0, "n", xlim=c(0.2, 0.8), ylim=c(0,11), main="Posteriors", xlab="x", ylab="p(x)")
+
+colors <- c("black", "red", lty=2, lwd=3)
+abline(v=c(max_flat, max_beta), col=colors)
+
+curve(flat_posterior(x), col="black", lwd=2, lty=1, add=TRUE)
+curve(beta_posterior(x), col="red", lwd=2, lty=2, add=TRUE)
+
+xs_flat = seq(from=max_flat-r_flat, to=max_flat+r_flat, length.out=50) 
+polygon( c(max_flat-r_flat, xs_flat, max_flat+r_flat), c(0, flat_posterior(xs_flat), 0), col=rgb(0,0,0,.5), border="black")
+abline(v=c(max_flat-r_flat, max_flat+r_flat), col="black", lty=3)
+
+xs_beta = seq(from=max_beta-r_beta, to=max_beta+r_beta, length.out=50) 
+polygon(c(max_beta-r_beta, xs_beta, max_beta+r_beta), c(0, beta_posterior(xs_beta), 0), col=rgb(1,0,0,.5), border="red")
+abline(v=c(max_beta-r_beta, max_beta+r_beta), col="red", lty=3)
+
+legend("topright", legend=c("Flat", "Beta", "CI 95%"), lty=c(1,2,3), lwd=c(2,2,1), col=c("black", "red", "red"), y.intersp=1.5)
+```
+
+c) Repeat the same analysis assuming a sequential analysis of the data. Show how the most probable value and the credibility interval change as a function of the number of coin tosses (i.e. from $1$ to $30$).
+
+```{r}
+#'H' = 1, 'T' = 0
+successes = cumsum(outcomes == 'H')
+
+partial_posterior <- function(x, n_trial, alpha0, beta0) {
+    #Posterior after n_trial trials
+    return(dbeta(x, alpha0 + successes[n_trial], beta0 + n_trial - successes[n_trial]))
+}
+```
+
+```{r}
+#Allocate arrays
+modes_flat <- seq(1:30)
+ci_left_flat <- seq(1:30)
+ci_right_flat <- seq(1:30)
+
+modes_beta <- seq(1:30)
+ci_left_beta <- seq(1:30)
+ci_right_beta <- seq(1:30)
+
+for (i in seq(1:30)) {
+    mode_flat <- optimize(partial_posterior, interval=c(0,1), n_trial=i, alpha0=1, beta0=1, maximum=TRUE)$maximum
+    mode_beta <- optimize(partial_posterior, interval=c(0,1), n_trial=i, alpha0=beta_prior_a, beta0=beta_prior_b,
+                          maximum=TRUE)$maximum
+    
+    ci_radius_flat <- radius_ci(partial_posterior, mode_flat, .95, n_trial=i, alpha0=1, beta0=1)
+    ci_radius_beta <- radius_ci(partial_posterior, mode_beta, .95, n_trial=i, alpha0=beta_prior_a, beta0=beta_prior_b)
+    
+    modes_flat[i] <- mode_flat
+    ci_left_flat[i] <- max(mode_flat - ci_radius_flat, 0)
+    ci_right_flat[i] <- min(mode_flat + ci_radius_flat, 1)
+    
+    modes_beta[i] <- mode_beta
+    ci_left_beta[i] <- max(mode_beta - ci_radius_beta, 0)
+    ci_right_beta[i] <- min(mode_beta + ci_radius_beta, 1)
+}
+```
+
+```{r}
+plot(0,0, "n", xlim=c(0,30), ylim=c(0,1), main="Sequential Analysis", xlab="N. of coin tosses", ylab="p(Head)")
+
+#---Colors---#
+aquamarine <- rgb(102, 205, 170, max=255, alpha=150)
+aquamarine_dark <- rgb(45,92,76, max=255)
+coral <- rgb(255, 127, 80, max=255, alpha=150)
+coral_dark <- rgb(94,34,22, max=255)
+
+#---Fill---#
+polygon( c(seq(1:30), seq(from=30, to=1), 1), c(ci_right_flat, rev(ci_left_flat), ci_right_flat[1]),
+         col=aquamarine, border="blue")
+polygon( c(seq(1:30), seq(from=30, to=1), 1), c(ci_right_beta, rev(ci_left_beta), ci_right_beta[1]),
+         col=coral, border="red")
+
+#---Lines---#
+lines(seq(1:30), modes_flat, "b", ylim=c(0,1), lwd=2, col=rgb(45, 92, 76, max=255))
+lines(seq(1:30), modes_beta, "b", ylim=c(0,1), lwd=2, col=rgb(94, 34, 22, max=255), pch=4)
+abline(h=0.5, col="red")
+
+#---Legend---#
+legend("top", c("Mode - Flat", "CI [95%]", "Mode - Beta", "CI [95%]"),
+                 col=c(aquamarine_dark, "blue", coral_dark, "red"),
+                 pch=c(1, 22, 4, 22),
+                 lwd=c(2,1,2,1),
+                 lty=c(2,NA,2,NA),
+                 pt.bg=c(NA, "aquamarine3", NA, "coral"),
+                 y.intersp=1.5, cex=.8, horiz=TRUE)
+```
+
+d) Do you get a different result, by analyzing the data sequentially with respect to a one-step analysis (i.e. considering all the data as a whole)?
+
+
+The final results are the same.

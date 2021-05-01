@@ -44,19 +44,33 @@ f <- function(x,a,b,c) {
 ```
 
 ```{r}
+#Some examples of parameters
 a = -2
 b = 1
 c = 0
 
 xs = seq(a,b, length.out=50)
-plot(xs, f(xs, a, b, c), pch=20, col = 'red', xlab='x', ylab='f(x)')
-curve(f(x,a,b,c), from=a, to=b, lwd=2, col = 'black', lty=2, add=TRUE)
+plot(xs, f(xs, a, b, c), pch=20, col = 'red', xlab='x', ylab='f(x)')   #Plot some points
+curve(f(x,a,b,c), from=a, to=b, lwd=2, col = 'black', lty=2, add=TRUE) #and a continuous curve
 ```
 
 b) write an algorithm to generate random numbers from the triangular distribution
 
+
+The CDF for the triangular distribution is:
+$$F(x) = \int_a^x f(x) \,\mathrm{d}x= \begin{cases}
+\frac{(x-a)^2}{(b-a)(c-a)} & a < x < c\\
+1- \frac{(x-b)^2}{(b-a)(b-c)} & c \leq x < b
+\end{cases}$$
+And its inverse is:
+$$F^{-1}(u) = \begin{cases}
+a + \sqrt{(b-a)(c-a)u} & 0 < u < \frac{c-a}{b-a} \\
+b - \sqrt{(b-a)(b-c)(1-u)} & \frac{c-a}{b-a} \leq u < 1
+\end{cases}$$
+
 ```{r}
 invCDF <- function(p, a,b,c) {
+    #Inverse CDF for the triangular distribution
     if (c > b | c < a)
         return(-1)
     
@@ -69,6 +83,7 @@ invCDF <- function(p, a,b,c) {
 
 ```{r}
 rtriangular <- function(a,b,c, num=1) {
+    #Inverse transform method to generate random numbers
     u <- runif(num)
     triang <- invCDF(u, a,b,c)
     
@@ -76,15 +91,19 @@ rtriangular <- function(a,b,c, num=1) {
 }
 ```
 
-**TO DO**: Add rejection sampling (see below)
-
-
 c) generate $10^4$ random number from the distribution, show them in an histogram and superimpose the analytical curve
 
 ```{r}
 N = 10000
-hist(rtriangular(-2,1,0, N), 50, freq=FALSE)
-curve(f(x,a,b,c), from=a, to=b, lwd=2, col = 'black', lty=2, add=TRUE)
+hist(rtriangular(-2,1,0, N), 50, freq=FALSE, xlab="x", main="Triangular distribution", col="aquamarine3")
+curve(f(x,a,b,c), from=a, to=b, lwd=2, col = 'red', lty=2, add=TRUE)
+
+legend("topright", c("Simulated","True"), pch=c(22,NA), lty=c(NA,2), horiz=F,
+       col=c("black","red"), pt.bg=c("aquamarine3", NA), lwd=c(1,2),
+       bty="n", y.intersp=1.5)
+
+#Here the histogram is normalized to area 1 (with freq=FALSE) to allow superimposition. The other possibility is to scale 
+#the pdf by the histogram area, which is explored in the plot of Exercise 4 for completeness.
 ```
 
 ## Exercise 2
@@ -99,8 +118,8 @@ a) plot the probability density function and the cumulative density function
 p <- c(0.05, 0.19, 0.14, 0.17, 0.02, 0.11, 0.06, 0.05, 0.04, 0.17)
 
 par(mfrow=c(1,2))
-barplot(p, names.arg = seq_along(p), xlab='x', ylab='PDF(x)')
-barplot(cumsum(p), names.arg = seq_along(p), xlab='x', ylab='CDF(x)')
+barplot(p, names.arg = seq_along(p), xlab='x', ylab='PDF(x)', col="aquamarine3")
+barplot(cumsum(p), names.arg = seq_along(p), xlab='x', ylab='CDF(x)', col="coral")
 ```
 
 b) Write an algorithm to generate random numbers from the discrete probability distribution
@@ -110,13 +129,24 @@ cdf <- cumsum(p)
 
 generate_discrete <- function(num = 1) {
     u <- runif(num)
-    
-    return(findInterval(u, cdf) + 1) 
+    return(findInterval(u, cdf) + 1)
+    #cdf is a vector of non-decreasing entries, to be interpreted as "edges" of intervals
+    #findInterval(u, cdf) returns a vector of left-most indices i, so that vec[i[j]] <= u[j] < vec[i[j] + 1] for any index j in vec
+    #these are the random numbers we seek (a offset of 1 is needed because we count states starting from 1)
 }
 ```
 
 ```{r}
-barplot(table(generate_discrete(10000)))
+num_generated <- 10000
+barplot(rbind(table(generate_discrete(num_generated)), p*num_generated), beside=T, 
+        col=c("aquamarine3","coral"), 
+        names.arg=rep(seq_along(p),1),
+        main="Discrete sampling",
+        xlab="State",
+        ylab="Frequency")
+legend(x=19, y=1900, c("Simulated","True"), pch=15, 
+       col=c("aquamarine3","coral"), 
+       bty="n", y.intersp=1.5)
 ```
 
 ## Exercise 3
@@ -133,26 +163,35 @@ func <- function(x, R) {
     return(value)
 }
 
-sample_func <- function(R, num=1) { #add comments on batches
-    batch_size <- max(c(num %/% 10, 1))
+sample_func <- function(R, num=1) {
+    #Generate random samples from func(x) given R by using rejection sampling.
     
-    n_generated <- 0
-    generated <- rep(NA, num)
+    #Vectorized operations are faster - but it is not possible to completely parallelize rejection sampling,
+    #because rejected samples need to be regenerated. As a compromise, a batch rejection sampling is implemented.
+    
+    batch_size <- max(c(num %/% 10, 1)) #Divide the number of samples to generate in 10 batches
+    #Each batch is vectorized, producing at most batch_size samples. Due to rejections, to reach the required @num of samples
+    #more than 10 batches will need to be computed.
+    
+    n_generated <- 0  #Track how many samples have been generated
+    generated <- rep(NA, num) #Allocate memory for generated samples
     
     M <- 2 / (pi * R)
     
     while (n_generated < num) {
         x <- (runif(batch_size) - 0.5) * 2 * R #Uniform x in [-R, R]
     
+        #Vectorized rejection sampling on a batch
         f_val <- func(x, R)
         accept <- runif(batch_size) * M
-        
         batch_gen <- x[accept < f_val]
         
-        generated[(n_generated+1):min(num, n_generated + length(batch_gen))] <- as.array(batch_gen)[1:min(length(batch_gen),
-                                                                                                          num - n_generated)]
+        #Append generated samples in generated, replacing the first available block of NAs.
+        #Operations on indices are to avoid memory errors.
+        generated[(n_generated+1):min(num, n_generated + length(batch_gen))] <-
+                 as.array(batch_gen)[1:min(length(batch_gen),num - n_generated)]
         
-        n_generated <- n_generated + length(batch_gen)
+        n_generated <- n_generated + length(batch_gen) 
     }
     
     return(generated)
@@ -160,7 +199,14 @@ sample_func <- function(R, num=1) { #add comments on batches
 ```
 
 ```{r}
-hist(sample_func(5, 100000))
+num_generated <- 10000
+R <- 5
+
+hist(sample_func(R, num_generated), xlab='x', ylab='Density', main='Histogram', col='aquamarine3', freq=FALSE)
+curve(func(x,R), from=-R, to=R, add=TRUE, lwd=2, lty=2, col="red")
+legend("topleft", c("Simulated","True"), pch=c(22,NA), lty=c(NA,2), horiz=F,
+       col=c("black","red"), pt.bg=c("aquamarine3", NA), lwd=c(1,2),
+       bty="n", y.intersp=1.5)
 ```
 
 ## Exercise 4
@@ -173,17 +219,26 @@ $$Y = \beta \sum_{j=1}^m (-\ln U_j) = - \beta \ln \prod_{j=1}^m U_j$$
 a) write an algorithm to sample variables from an Erlang distribution $\mathrm{Gamma}(m, \beta)$.
 
 ```{r}
-rGamma <- function(m, beta, num=1) { #Uj are uniform!
+rGamma <- function(m, beta, num=1) {
     Xjs <- matrix(runif(num * m), ncol=m, byrow=TRUE) #matrix (num, m), store by row
     
-    products <- apply(Xjs, 1, prod)
+    products <- apply(Xjs, 1, prod) #compute products before log = better performance
     
     return(-beta * log(products))
-} #plot over gamma
+}
 ```
 
 ```{r}
-hist(rGamma(2,.5,10000), 50) #TO DO: Superimpose Gamma dist
+histo <- hist(rGamma(2,.5,10000), 50, xlab='x', ylab='Frequency',
+              main=expression(paste("Histogram of Erlang distribution ", Gamma, "(2,.5)")),
+              col="aquamarine3")
+delta <- histo$breaks[2]-histo$breaks[1]
+tot <- sum(histo$counts)
+curve(dgamma(x, 2, rate=2) * delta * tot, from=0, to=5, lty=2, lwd=2, col="red", add=TRUE)
+
+legend("topright", c("Simulated","True"), pch=c(22,NA), lty=c(NA,2), horiz=F,
+       col=c("black","red"), pt.bg=c("aquamarine3", NA), lwd=c(1,2),
+       bty="n", y.intersp=1.5)
 ```
 
 ## Exercise 5
@@ -204,17 +259,19 @@ install.packages('lambda.r')
 ```
 
 ```{r}
-library(lambda.r)
+library(lambda.r) #Needed to build a python-like generator
 ```
 
 ```{r}
+#The following object behaves like a Python generator
+#It is a class initialized with a @start_seed, holding as internal state the last generated random number
 middle_square_generator(start_seed) %as%
 {
   n <- as.integer(log10(start_seed)) #number of digits in the seed
   value <- start_seed
-  function() {
     
-    number <- unlist(strsplit(format(value^2, scientific=FALSE), ""))
+  function() {
+    number <- unlist(strsplit(format(value^2, scientific=FALSE), "")) #Compute square of number and convert to list of digits
     n_to_remove = length(number) - n
     
     if (n_to_remove < 0) {
@@ -222,20 +279,23 @@ middle_square_generator(start_seed) %as%
     }
       
     trimmed <- number[(ceiling(n_to_remove/2)):(n+ceiling(n_to_remove/2))]
-    trimmed_numeric <- as.numeric(paste(trimmed, collapse=""))
-    value <<- as.numeric(paste(trimmed, collapse=""))
+    #Remove one digit from each side (starting from the right), until n_to_remove digits are removed.
+      
+    value <<- as.numeric(paste(trimmed, collapse="")) #convert back to a number and return
     return(value)
   }
-} #discuss (TO DO)
+} 
 ```
 
 ```{r}
-gen <- middle_square_generator(1234)
+gen <- middle_square_generator(1234) #Instantiate generator with a given seed
+
 for(i in 1:1000) {
-    print(gen())
+    print(gen()) #every time the instantiated generator is invoked, a new random number is generated
 }
-```
 
-```{r}
-
+#It is not very efficient: after a few iterations it get stucks in a loop, or start producing an infinite sequence of zeros
+#or ones.
+#Also, sometimes the middle part of a number has leading zeros (e.g. 0322), and so the generated number will have less digits
+#than the seed.
 ```
